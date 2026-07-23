@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blog — Acme</title>
+<meta name="description" content="Reference implementation of the blog-builder hub standard: hero band, spotlight + most-read rail, topic sections, conversion band.">
+<style>
+/* ===== Tokens — same set as article.html (references/design-tokens.md) ===== */
+:root {
+  --brand:#0e7490; --brand-strong:#0c637c;
+  --brand-soft:color-mix(in srgb,var(--brand) 10%,#fff);
+  --brand-rich:linear-gradient(135deg,#22d3ee 0%,#0e7490 55%,#164e63 100%);
+  --background:#fff; --foreground:#1c1c1f; --body:#5f5f5f; --muted-foreground:#9a9aa6; --border:#e7e7ec;
+  --blog-surface:color-mix(in srgb,var(--brand) 6%,#fff); /* light-only hub tint */
+  --font-display:system-ui,"Segoe UI",sans-serif; --font-sans:system-ui,"Segoe UI",sans-serif;
+  --radius-card:16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --background:#101014; --foreground:#f2f2f5; --body:#b6b6c2; --muted-foreground:#7c7c8a; --border:#2a2a33; --blog-surface:#101014; --brand-soft:color-mix(in srgb,var(--brand) 22%,#101014); }
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--blog-surface); color:var(--foreground); font-family:var(--font-sans); line-height:1.6; }
+a { color:inherit; text-decoration:none; }
+.wrap { max-width:1180px; margin:0 auto; padding:0 24px; }
+.meta { font-size:12.5px; color:var(--muted-foreground); } /* neutral gray — never category-colored */
+
+/* ===== Header (white, category nav with dots + counts) ===== */
+header.site { background:var(--background); border-bottom:1px solid var(--border); }
+header.site .top { display:flex; align-items:center; justify-content:space-between; height:60px; }
+.logo { font-family:var(--font-display); font-weight:800; font-size:19px; }
+.cta-btn { background:var(--brand); color:#fff; border-radius:999px; padding:9px 18px; font-weight:700; font-size:14px; }
+nav.cats { display:flex; gap:18px; overflow-x:auto; padding:10px 0; font-size:14px; }
+nav.cats a { display:flex; gap:7px; align-items:center; white-space:nowrap; color:var(--body); font-weight:600; }
+nav.cats .dot { width:8px; height:8px; border-radius:50%; }
+nav.cats .n { font-size:11.5px; color:var(--muted-foreground); background:var(--border); border-radius:999px; padding:1px 7px; }
+
+/* ===== Hero band (~280px, brand gradient) ===== */
+.hero { background:var(--brand-rich); color:#fff; }
+.hero .wrap { min-height:280px; display:flex; flex-direction:column; justify-content:center; padding-top:34px; padding-bottom:34px; }
+.hero .pill { align-self:flex-start; border:1px solid rgba(255,255,255,.4); border-radius:999px; padding:5px 13px; font-size:12.5px; font-weight:700; }
+.hero h1 { font-family:var(--font-display); font-weight:900; letter-spacing:-.02em; font-size:clamp(26px,3.6vw,40px); margin:12px 0 6px; }
+.hero p { margin:0 0 16px; opacity:.92; max-width:56ch; }
+.hero .btns { display:flex; gap:10px; flex-wrap:wrap; }
+.hero .b1 { background:#fff; color:var(--brand-strong); border-radius:999px; padding:10px 18px; font-weight:700; }
+.hero .b2 { border:1px solid rgba(255,255,255,.55); border-radius:999px; padding:10px 18px; font-weight:700; }
+
+/* ===== Spotlight: featured (2/3) + most-read rail (1/3) ===== */
+.spot { display:grid; grid-template-columns:2fr 1fr; gap:22px; margin:30px auto 0; align-items:stretch; }
+.card { background:var(--background); border:1px solid var(--border); border-radius:var(--radius-card); overflow:hidden; }
+.feat .thumb { aspect-ratio:16/8; background:var(--brand-rich); }
+.feat .p { padding:18px 20px; }
+.feat h2 { font-family:var(--font-display); font-size:clamp(19px,2.4vw,26px); margin:8px 0 8px; line-height:1.25; }
+.feat p.x { color:var(--body); margin:0 0 10px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.cat-badge { background:var(--brand-soft); color:var(--brand-strong); font-weight:700; font-size:12px; padding:4px 10px; border-radius:999px; }
+.rail { display:flex; flex-direction:column; padding:18px; }
+.rail h3 { margin:0 0 8px; font-family:var(--font-display); font-size:15px; }
+.rail ol { list-style:none; margin:0; padding:0; flex:1; display:flex; flex-direction:column; justify-content:space-between; }
+.rail li a { display:flex; gap:12px; padding:9px 0; align-items:flex-start; }
+.rail .num { font-family:var(--font-display); font-weight:900; font-size:20px; line-height:1; background:var(--brand-rich); -webkit-background-clip:text; background-clip:text; color:transparent; min-width:22px; }
+.rail .t { font-size:13.5px; font-weight:600; line-height:1.35; }
+.rail .all { margin-top:10px; font-size:13px; color:var(--brand-strong); font-weight:700; }
+
+/* ===== Topic sections: dot + name + desc + 6 compact cards + CTA ===== */
+.section { margin:44px auto 0; }
+.sec-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.sec-head .dot { width:10px; height:10px; border-radius:50%; align-self:center; }
+.sec-head h2 { font-family:var(--font-display); font-size:clamp(19px,2.4vw,24px); margin:0; }
+.sec-head .desc { color:var(--body); font-size:14px; }
+.grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:16px; }
+.ccard { display:flex; gap:12px; padding:12px; align-items:center; }
+.ccard .thumb { flex:0 0 92px; aspect-ratio:4/3; border-radius:10px; background:var(--brand-rich); }
+.ccard h3 { font-size:14.5px; margin:0 0 5px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.sec-foot { display:flex; justify-content:space-between; align-items:center; margin-top:14px; flex-wrap:wrap; gap:10px; }
+.sec-foot .all { font-weight:700; font-size:14px; color:var(--brand-strong); }
+.sec-cta { background:var(--brand-soft); border-radius:999px; padding:8px 16px; font-size:13.5px; font-weight:700; color:var(--brand-strong); }
+
+/* ===== Conversion band + footer ===== */
+.convert { margin-top:60px; background:var(--brand-rich); color:#fff; text-align:center; padding:52px 24px; }
+.convert h2 { font-family:var(--font-display); font-weight:900; font-size:clamp(23px,3.2vw,30px); margin:0 0 8px; }
+.convert .btns { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:20px; }
+.convert a { background:#fff; color:var(--brand-strong); border-radius:999px; padding:11px 20px; font-weight:700; }
+footer.site { background:var(--background); border-top:1px solid var(--border); padding:26px 24px; text-align:center; font-size:13.5px; color:var(--muted-foreground); }
+
+/* ===== Responsive tiers (references/responsive.md) ===== */
+@media (max-width:1024px) { .spot { grid-template-columns:1fr; } .grid { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:760px)  { .hero .wrap { min-height:0; } }
+@media (max-width:600px)  { .grid { grid-template-columns:1fr; } .hero .btns a { flex:1; text-align:center; } }
+@media (prefers-reduced-motion: reduce) { * { animation:none!important; transition:none!important; } }
+</style>
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <div class="top"><span class="logo">Acme</span><a class="cta-btn" href="#">Try free</a></div>
+  <nav class="cats" aria-label="Categories">
+    <a href="#"><span class="dot" style="background:#f59e0b"></span>SEO Basics<span class="n">24</span></a>
+    <a href="#"><span class="dot" style="background:#6366f1"></span>Technical SEO<span class="n">18</span></a>
+    <a href="#"><span class="dot" style="background:#8b5cf6"></span>Content Strategy<span class="n">31</span></a>
+    <a href="#"><span class="dot" style="background:#10b981"></span>Case Studies<span class="n">9</span></a>
+    <a href="#"><span class="dot" style="background:#f43f5e"></span>News<span class="n">12</span></a>
+  </nav>
+</div></header>
+
+<section class="hero"><div class="wrap">
+  <span class="pill">SEO in the AI era · <span class="js-year"></span></span>
+  <h1>Learn SEO that machines cite and humans finish</h1>
+  <p>Guides, teardowns, and experiments from the Acme team.</p>
+  <div class="btns"><a class="b1" href="#">Start reading</a><a class="b2" href="#">Try Acme free</a></div>
+</div></section>
+
+<div class="wrap">
+  <div class="spot">
+    <a class="card feat" href="#"><div class="thumb"></div><div class="p">
+      <span class="cat-badge">★ Featured</span>
+      <h2>What is Technical SEO? A Practical Guide</h2>
+      <p class="x">Crawling, rendering, structured data — the foundation your content stands on, explained without jargon.</p>
+      <span class="meta">Jul 1, 2026 · 14 min read</span>
+    </div></a>
+    <div class="card rail">
+      <h3>🔥 Most read <span class="meta">· Google clicks, 7 days</span></h3>
+      <ol>
+        <!-- Fixed top 5–7 from real analytics; fall back to newest + relabel if no data. Never fake. -->
+        <li><a href="#"><span class="num">1</span><span><span class="t">Answer-first writing for AI search</span><br><span class="meta">12 min read</span></span></a></li>
+        <li><a href="#"><span class="num">2</span><span><span class="t">Core Web Vitals, explained simply</span><br><span class="meta">9 min read</span></span></a></li>
+        <li><a href="#"><span class="num">3</span><span><span class="t">Internal linking that compounds</span><br><span class="meta">11 min read</span></span></a></li>
+        <li><a href="#"><span class="num">4</span><span><span class="t">Schema that still matters in 2026</span><br><span class="meta">8 min read</span></span></a></li>
+        <li><a href="#"><span class="num">5</span><span><span class="t">A 12-month content blueprint</span><br><span class="meta">15 min read</span></span></a></li>
+      </ol>
+      <a class="all" href="#">View all →</a>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="sec-head"><span class="dot" style="background:#6366f1"></span><h2>Technical SEO</h2><span class="desc">Make your site fast, crawlable, machine-readable.</span><span class="meta">18 posts · 156 min read</span></div>
+    <div class="grid">
+      <!-- Repeat 6 compact cards per topic section -->
+      <a class="card ccard" href="#"><span class="thumb"></span><span><h3>Fixing index coverage errors step by step</h3><span class="meta">Jul 15, 2026 · 8 min</span></span></a>
+      <a class="card ccard" href="#"><span class="thumb"></span><span><h3>Core Web Vitals, explained simply</h3><span class="meta">Jul 12, 2026 · 9 min</span></span></a>
+      <a class="card ccard" href="#"><span class="thumb"></span><span><h3>Canonical URLs without tears</h3><span class="meta">Jul 10, 2026 · 7 min</span></span></a>
+      <a class="card ccard" href="#"><span class="thumb"></span><span><h3>Structured data that earns citations</h3><span class="meta">Jul 6, 2026 · 10 min</span></span></a>
+      <a class="card ccard" href="#"><span class="thumb"></span><span><h3>JS rendering pitfalls for SEO</h3><span class="meta">Jul 3, 2026 · 12 min</span></span></a>
+      <a class="card ccard" href="#"><span class="thumb"></span><span><h3>What is Technical SEO? A practical guide</h3><span class="meta">Jul 1, 2026 · 14 min</span></span></a>
+    </div>
+    <div class="sec-foot"><a class="all" href="#">View all 18 →</a><a class="sec-cta" href="#">🔍 Audit your site with Acme →</a></div>
+  </section>
+  <!-- …one .section per remaining category… -->
+</div>
+
+<section class="convert"><h2>Done reading — let Acme write for you?</h2><p>Standards-compliant articles for your own site, in minutes.</p>
+  <div class="btns"><a href="#">✍️ Write an article</a><a href="#">Research keywords →</a></div></section>
+
+<footer class="site">© <span class="js-year"></span> Acme · <a href="#">Terms</a> · <a href="#">Privacy</a></footer>
+<script>document.querySelectorAll('.js-year').forEach(e => e.textContent = new Date().getFullYear());</script>
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What is Technical SEO? A Practical Guide — Acme Blog</title>
+<meta name="description" content="Reference implementation of the blog-builder article standard: auto-TOC, reading progress, prose typography, styled tables, E-E-A-T blocks.">
+<!-- Reference implementation. Swap --brand, fonts, and copy for the target site.
+     JSON-LD: BlogPosting + BreadcrumbList + Person + Organization (see references/seo-geo.md). -->
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+ {"@type":"BlogPosting","headline":"What is Technical SEO? A Practical Guide","datePublished":"2026-07-01","dateModified":"2026-07-20",
+  "author":{"@type":"Person","name":"Alex Tran","jobTitle":"SEO Lead"},
+  "publisher":{"@type":"Organization","name":"Acme","url":"https://example.com"},
+  "mainEntityOfPage":"https://example.com/blog/what-is-technical-seo"},
+ {"@type":"BreadcrumbList","itemListElement":[
+  {"@type":"ListItem","position":1,"name":"Blog","item":"https://example.com/blog"},
+  {"@type":"ListItem","position":2,"name":"Technical SEO","item":"https://example.com/blog/category/technical-seo"},
+  {"@type":"ListItem","position":3,"name":"What is Technical SEO?"}]}]}
+</script>
+<style>
+/* ===== Tokens (references/design-tokens.md) — user's brand replaces --brand ===== */
+:root {
+  --brand: #0e7490;
+  --brand-strong: #0c637c;
+  --brand-soft: color-mix(in srgb, var(--brand) 10%, #fff);
+  --brand-rich: linear-gradient(135deg, #22d3ee 0%, #0e7490 55%, #164e63 100%);
+  --background: #ffffff; --foreground: #1c1c1f; --body: #5f5f5f;
+  --muted-foreground: #9a9aa6; --border: #e7e7ec;
+  --font-display: system-ui, "Segoe UI", sans-serif;
+  --font-sans: system-ui, "Segoe UI", sans-serif;
+  --radius-card: 16px; --radius-figure: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --background:#101014; --foreground:#f2f2f5; --body:#b6b6c2; --muted-foreground:#7c7c8a; --border:#2a2a33; --brand-soft: color-mix(in srgb, var(--brand) 22%, #101014); }
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--background); color:var(--foreground); font-family:var(--font-sans); line-height:1.6; -webkit-font-smoothing:antialiased; }
+a { color:var(--brand-strong); text-decoration:none; }
+img { max-width:100%; display:block; }
+.wrap { max-width:1180px; margin:0 auto; padding:0 24px; }
+
+/* ===== Header + reading progress ===== */
+header.site { border-bottom:1px solid var(--border); background:var(--background); }
+header.site .wrap { display:flex; align-items:center; justify-content:space-between; height:60px; }
+.logo { font-family:var(--font-display); font-weight:800; font-size:19px; letter-spacing:-.02em; color:var(--foreground); }
+.cta-btn { background:var(--brand); color:#fff; border-radius:999px; padding:9px 18px; font-weight:700; font-size:14px; }
+#progress { position:fixed; top:0; left:0; height:3px; width:0; background:var(--brand-rich); z-index:60; }
+
+/* ===== Article head ===== */
+.crumb { font-size:13px; color:var(--muted-foreground); margin:26px 0 10px; }
+.col-head { max-width:800px; margin:0 auto; text-align:center; }
+.badge-row { display:flex; gap:10px; justify-content:center; align-items:center; font-size:13px; }
+.cat-badge { background:var(--brand-soft); color:var(--brand-strong); font-weight:700; padding:5px 12px; border-radius:999px; }
+.pub-date { color:var(--muted-foreground); }
+h1.title { font-family:var(--font-display); font-weight:900; letter-spacing:-.03em; font-size:clamp(32px,5.6vw,54px); line-height:1.08; margin:16px 0 18px; }
+.byline { display:flex; gap:10px; align-items:center; justify-content:center; font-size:14px; }
+.byline .ava { width:34px; height:34px; border-radius:50%; background:var(--brand-rich); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; }
+.byline .role { color:var(--muted-foreground); }
+.cover { max-width:980px; margin:26px auto 0; aspect-ratio:16/9; border-radius:20px; background-image:var(--brand-rich); display:flex; align-items:center; justify-content:center; }
+.cover .mark { font-family:var(--font-display); font-weight:900; font-size:clamp(40px,8vw,76px); color:rgba(255,255,255,.28); }
+
+/* ===== 3-column layout: share | prose | toc ===== */
+.layout { display:grid; grid-template-columns:60px minmax(0,1fr) 268px; gap:38px; max-width:1140px; margin:40px auto 0; padding:0 24px; align-items:start; }
+.share-rail { position:sticky; top:88px; display:flex; flex-direction:column; gap:10px; }
+.share-rail button, .share-rail a { width:44px; height:44px; border-radius:50%; border:1px solid var(--border); background:var(--background); color:var(--body); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:15px; }
+.toc { position:sticky; top:88px; max-height:calc(100vh - 120px); overflow:auto; border:1px solid var(--border); border-radius:var(--radius-card); padding:16px; font-size:14px; }
+.toc h4 { margin:0 0 10px; font-family:var(--font-display); font-size:14px; }
+.toc ol { list-style:none; margin:0; padding:0; }
+.toc li a { display:block; padding:5px 0; color:var(--body); }
+.toc li.h3 a { padding-left:18px; position:relative; font-size:13px; }
+.toc li.h3 a::before { content:"•"; position:absolute; left:6px; color:var(--muted-foreground); }
+.toc li a.active { color:var(--brand-strong); font-weight:700; }
+.rail-cta { margin-top:14px; border-radius:var(--radius-card); background:var(--brand-rich); color:#fff; padding:18px; }
+.rail-cta a { display:inline-block; margin-top:10px; background:#fff; color:var(--brand-strong); border-radius:999px; padding:8px 14px; font-weight:700; font-size:13px; }
+.toc-mobile { display:none; border:1px solid var(--border); border-radius:var(--radius-card); margin:0 0 22px; }
+.toc-mobile summary { cursor:pointer; padding:13px 16px; font-weight:800; font-family:var(--font-display); font-size:14.5px; list-style:none; }
+.toc-mobile ol { padding:0 16px 12px; }
+
+/* ===== Prose — bare tags (references/article-page.md) ===== */
+.prose { max-width:740px; font-size:18px; color:var(--body); }
+.prose p { max-width:70ch; line-height:1.7; overflow-wrap:break-word; }
+.prose h2 { font-family:var(--font-display); font-weight:800; font-size:1.5em; letter-spacing:-.02em; margin:1.9em 0 .55em; line-height:1.2; color:var(--brand-strong); scroll-margin-top:88px; }
+.prose h3 { font-family:var(--font-display); font-weight:700; font-size:1.18em; margin:1.5em 0 .45em; color:var(--foreground); scroll-margin-top:88px; }
+.prose strong { color:var(--foreground); }
+.prose a { font-weight:600; } .prose a:hover { text-decoration:underline; }
+.prose blockquote { margin:1.4em 0; padding:12px 18px; border-left:4px solid var(--brand); background:var(--brand-soft); border-radius:0 10px 10px 0; }
+.prose img { border-radius:var(--radius-figure); }
+.table-wrap { overflow-x:auto; margin:1.6em 0; }
+.prose table { border-collapse:separate; border-spacing:0; width:100%; border:1px solid var(--border); border-radius:var(--radius-figure); overflow:hidden; font-size:15px; }
+.prose caption { caption-side:top; background:var(--brand-rich); color:#fff; font-family:var(--font-display); font-weight:800; font-size:13px; letter-spacing:.04em; text-transform:uppercase; padding:11px; border-radius:var(--radius-figure) var(--radius-figure) 0 0; }
+.prose th { background:var(--brand-soft); color:var(--foreground); font-weight:700; text-align:left; }
+.prose th, .prose td { padding:11px 14px; border-bottom:1px solid var(--border); }
+.prose tr:last-child td { border-bottom:0; }
+.callout { border:1px solid var(--border); border-left:4px solid var(--brand); border-radius:var(--radius-card); padding:18px 20px; margin:26px 0; }
+.callout h4 { margin:0 0 10px; font-family:var(--font-display); font-size:15px; }
+.callout ul { margin:0; padding-left:20px; }
+
+/* ===== Foot blocks ===== */
+.art-foot { max-width:740px; margin:36px auto 0; padding:0 24px; display:flex; flex-direction:column; gap:18px; }
+.box { border:1px solid var(--border); border-radius:var(--radius-card); padding:20px; }
+.aboutbox { border-left:4px solid var(--brand); }
+.box h3 { margin:0 0 8px; font-family:var(--font-display); font-size:17px; }
+.rating { text-align:center; }
+.rating .stars button { font-size:30px; background:none; border:none; cursor:pointer; color:var(--border); padding:4px; min-width:44px; min-height:44px; }
+.rating .stars button.on { color:#f5b301; }
+.rating .thanks { color:#15803d; font-weight:700; display:none; }
+.updated { font-size:13px; color:var(--muted-foreground); text-align:center; }
+
+/* ===== Related + convert band + footer ===== */
+.related { max-width:1140px; margin:54px auto 0; padding:0 24px; }
+.related h2 { font-family:var(--font-display); font-size:clamp(20px,2.6vw,26px); }
+.rtrack { display:flex; gap:16px; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:8px; }
+.rcard { flex:0 0 300px; scroll-snap-align:start; border:1px solid var(--border); border-radius:var(--radius-card); overflow:hidden; background:var(--background); }
+.rcard .thumb { aspect-ratio:16/9; background:var(--brand-rich); }
+.rcard .p { padding:12px 14px; } .rcard h3 { font-size:15px; margin:6px 0 4px; line-height:1.32; }
+.rcard .meta { font-size:12.5px; color:var(--muted-foreground); }
+.convert { margin:60px 0 0; background:var(--brand-rich); color:#fff; text-align:center; padding:52px 24px; }
+.convert h2 { font-family:var(--font-display); font-weight:900; font-size:clamp(23px,3.2vw,30px); margin:0 0 8px; }
+.convert .btns { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:20px; }
+.convert a { background:#fff; color:var(--brand-strong); border-radius:999px; padding:11px 20px; font-weight:700; }
+footer.site { border-top:1px solid var(--border); padding:26px 24px; text-align:center; font-size:13.5px; color:var(--muted-foreground); }
+#toTop { position:fixed; right:18px; bottom:18px; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--background); cursor:pointer; display:none; }
+
+/* ===== Responsive tiers (references/responsive.md) ===== */
+@media (max-width:1000px) {
+  .layout { grid-template-columns:minmax(0,1fr); }
+  .share-rail { position:static; flex-direction:row; margin-bottom:18px; }
+  .toc { display:none; } .toc-mobile { display:block; }
+  .prose { max-width:none; }
+}
+@media (max-width:640px) {
+  .cover { border-radius:14px; } .prose { font-size:17px; }
+  .rcard { flex-basis:82vw; max-width:300px; }
+}
+/* ===== Motion gate ===== */
+@media (prefers-reduced-motion: reduce) { * { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<header class="site"><div class="wrap"><span class="logo">Acme</span><a class="cta-btn" href="#">Try free</a></div></header>
+
+<div class="wrap"><div class="crumb"><a href="#">Blog</a> / <a href="#">Technical SEO</a></div></div>
+
+<div class="col-head wrap">
+  <div class="badge-row"><span class="cat-badge">Technical SEO</span><time class="pub-date" datetime="2026-07-01">Jul 1, 2026</time></div>
+  <h1 class="title">What is Technical SEO? A Practical Guide</h1>
+  <div class="byline"><span class="ava">AT</span><span><strong>Alex Tran</strong> <span class="role">· SEO Lead</span></span></div>
+</div>
+<div class="cover wrap"><span class="mark">Acme</span></div>
+
+<div class="layout">
+  <aside class="share-rail" aria-label="Share">
+    <a href="#" aria-label="Share on Facebook">f</a><a href="#" aria-label="Share on X">𝕏</a>
+    <a href="#" aria-label="Share on LinkedIn">in</a><button id="copyLink" aria-label="Copy link">🔗</button>
+  </aside>
+
+  <div>
+    <details class="toc-mobile"><summary>📑 In this article</summary><ol id="tocMobileList"></ol></details>
+    <div class="callout"><h4>⚡ TL;DR</h4><ul>
+      <li>Technical SEO makes a site crawlable, fast, and understandable to machines.</li>
+      <li>Start with indexing, speed, and structured data — in that order.</li>
+      <li>Audit quarterly; fix what measurably blocks crawling or rendering.</li>
+    </ul></div>
+
+    <!-- .prose receives bare-tag HTML from the CMS (references/content-contract.md) -->
+    <article class="prose" id="article">
+      <h2>What does technical SEO cover?</h2>
+      <p><strong>Technical SEO is the work that makes a website easy for search engines and AI systems to crawl, render, and understand.</strong> It covers indexing control, site speed, structured data, and architecture — the foundation content quality stands on. A self-contained answer like this one, placed directly under the question heading, is what AI engines extract.</p>
+      <h3>Crawling and indexing</h3>
+      <p>Robots directives, sitemaps, and canonical URLs decide what gets into the index at all.</p>
+      <h3>Rendering and speed</h3>
+      <p>Fast first paint and non-blocking scripts measurably increase both rankings and AI citations.</p>
+      <h2>Technical vs. on-page vs. off-page</h2>
+      <div class="table-wrap"><table>
+        <caption>Comparison — the three SEO pillars</caption>
+        <thead><tr><th>Criteria</th><th>On-page</th><th>Off-page</th><th>Technical</th></tr></thead>
+        <tbody>
+          <tr><td>Focus</td><td>Content</td><td>Reputation</td><td>Infrastructure</td></tr>
+          <tr><td>Owner</td><td>Writer</td><td>PR/Outreach</td><td>Developer</td></tr>
+          <tr><td>Cadence</td><td>Per article</td><td>Ongoing</td><td>Quarterly audit</td></tr>
+        </tbody>
+      </table></div>
+      <h2>Where should you start?</h2>
+      <p>Begin with an index-coverage audit, then speed, then structured data.</p>
+      <blockquote>Fix what blocks machines first; polish what delights humans second.</blockquote>
+    </article>
+
+    <div class="art-foot" style="padding:0">
+      <div class="box rating">
+        <h3>Was this article helpful?</h3>
+        <div class="stars" id="stars" role="radiogroup" aria-label="Rate this article"></div>
+        <p class="thanks" id="thanks">Thanks for your feedback!</p>
+      </div>
+      <div class="box aboutbox"><h3>About Acme</h3><p style="margin:0;color:var(--body)">Acme helps teams ship SEO-ready content. Explore <a href="#">the writer</a>, <a href="#">keyword research</a>, and <a href="#">site audits</a>.</p></div>
+      <div class="box"><h3>About the author</h3><p style="margin:0;color:var(--body)"><strong>Alex Tran</strong> — SEO Lead. 8 years of technical SEO for SaaS. <a href="#">All posts →</a></p></div>
+      <p class="updated">Last updated · <time datetime="2026-07-20">Jul 20, 2026</time></p>
+    </div>
+  </div>
+
+  <aside>
+    <nav class="toc" aria-label="Table of contents"><h4>📑 In this article</h4><ol id="tocList"></ol></nav>
+    <div class="rail-cta"><strong>Write SEO-ready articles with Acme</strong><br><a href="#">Start free →</a></div>
+  </aside>
+</div>
+
+<section class="related"><h2>Related posts</h2>
+  <div class="rtrack">
+    <a class="rcard" href="#"><div class="thumb"></div><div class="p"><span class="meta">Technical SEO</span><h3>Core Web Vitals, explained simply</h3><span class="meta">Jul 12, 2026 · 9 min read</span></div></a>
+    <a class="rcard" href="#"><div class="thumb"></div><div class="p"><span class="meta">Content</span><h3>Answer-first writing for AI search</h3><span class="meta">Jul 8, 2026 · 12 min read</span></div></a>
+  </div>
+</section>
+
+<section class="convert"><h2>Done reading — let Acme do it for you?</h2><p>Generate standards-compliant articles for your own site.</p>
+  <div class="btns"><a href="#">✍️ Write an article</a><a href="#">Research keywords →</a></div></section>
+
+<footer class="site">© <span id="year"></span> Acme · <a href="#">Terms</a> · <a href="#">Privacy</a></footer>
+<button id="toTop" aria-label="Back to top">↑</button>
+
+<script>
+// ===== Auto-TOC: parse H2/H3, assign ids, build desktop + mobile lists =====
+const article = document.getElementById('article');
+const heads = [...article.querySelectorAll('h2, h3')];
+const slug = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+const seen = {};
+let n = 0, items = [];
+for (const h of heads) {
+  let id = slug(h.textContent); if (seen[id]) id += '-' + (++seen[id]); else seen[id] = 1;
+  h.id = id;
+  const isH2 = h.tagName === 'H2'; if (isH2) n++;
+  items.push({ id, label: (isH2 ? n + '. ' : '') + h.textContent, cls: isH2 ? 'h2' : 'h3' });
+}
+for (const listId of ['tocList', 'tocMobileList']) {
+  const ol = document.getElementById(listId);
+  ol.innerHTML = items.map(i => `<li class="${i.cls}"><a href="#${i.id}" data-id="${i.id}">${i.label}</a></li>`).join('');
+}
+// Clean-URL anchor clicks + scroll-spy
+document.querySelectorAll('.toc a, .toc-mobile a').forEach(a => a.addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById(a.dataset.id).scrollIntoView({ behavior: 'smooth' });
+}));
+const spy = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  document.querySelectorAll(`.toc a, .toc-mobile a`).forEach(a =>
+    a.classList.toggle('active', a.dataset.id === e.target.id));
+}), { rootMargin: '-88px 0px -70% 0px' });
+heads.forEach(h => spy.observe(h));
+
+// ===== Reading progress + back-to-top =====
+const bar = document.getElementById('progress'), toTop = document.getElementById('toTop');
+addEventListener('scroll', () => {
+  const max = document.documentElement.scrollHeight - innerHeight;
+  bar.style.width = (max > 0 ? (scrollY / max) * 100 : 0) + '%';
+  toTop.style.display = scrollY > 600 ? 'block' : 'none';
+}, { passive: true });
+toTop.onclick = () => scrollTo({ top: 0, behavior: 'smooth' });
+
+// ===== Copy link + rating (input-only, no fake numbers) + dynamic year =====
+document.getElementById('copyLink').onclick = async function () {
+  await navigator.clipboard.writeText(location.href); this.textContent = '✓';
+  setTimeout(() => this.textContent = '🔗', 1500);
+};
+const stars = document.getElementById('stars');
+for (let i = 1; i <= 5; i++) {
+  const b = document.createElement('button'); b.textContent = '★'; b.setAttribute('aria-label', i + ' stars');
+  b.onclick = () => {
+    [...stars.children].forEach((s, j) => s.classList.toggle('on', j < i));
+    document.getElementById('thanks').style.display = 'block';
+    // POST the rating to your backend here; do NOT display an average until real data exists.
+  };
+  stars.appendChild(b);
+}
+document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
