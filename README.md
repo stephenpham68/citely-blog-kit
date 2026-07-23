@@ -30,13 +30,21 @@ Ask an AI agent to "build me a blog" without a standard and you get slop: hardco
 - 🤖 **SEO/GEO 2026, not 2020** — answer-first sections, TL;DR "citation magnet" blocks, `BlogPosting` + `Person` + `Organization` + `BreadcrumbList` JSON-LD, `dateModified` freshness — built for AI Overviews, ChatGPT & Perplexity citations
 - 📱 **Explicit responsive tiers** — mobile `<details>` TOC, horizontal share bar, snap-scroll related sliders, zero horizontal overflow
 - 🧩 **Works with any stack** — plain HTML, React/Next, Astro, Vue, PHP themes; two single-file reference templates included
+- ⚡ **Instant publishing from Citely** *(optional skill)* — read-API reader or signed-webhook receiver + deploy-hook wiring, so a publish in Citely is live on your site in seconds, not hours
 - ✅ **Definition of Done checklist** — the agent audits its own work before calling the blog "finished"
 - 🚫 **Hard rules against slop** — no fake numbers, no third-party ads, no hardcoded years, motion gated by `prefers-reduced-motion`
 
 ## 📦 What's inside
 
+Two skills — use `blog-builder` alone, or both together for the full "publish in Citely → live on your site in seconds" pipeline:
+
 ```
-skills/blog-builder/
+skills/citely-connect/            # (optional) receive articles from Citely — instantly
+├── SKILL.md                      # Mode decision (read-API vs webhook receiver), workflow, hard rules
+└── references/
+    └── instant-publish.md        # Freshness patterns per stack + diagnosing slow-to-appear articles
+
+skills/blog-builder/              # the blog UI standard
 ├── SKILL.md                  # Agent instructions: workflow, inputs, hard rules
 ├── references/
 │   ├── design-tokens.md      # Token set, brand-color math, dark mode, contrast rules
@@ -76,6 +84,8 @@ flowchart LR
 ```bash
 git clone https://github.com/stephenpham68/citely-blog-kit
 cp -r citely-blog-kit/skills/blog-builder your-project/.claude/skills/blog-builder
+# optional — also receive articles from Citely with instant publishing:
+cp -r citely-blog-kit/skills/citely-connect your-project/.claude/skills/citely-connect
 ```
 
 **2. Ask your agent:**
@@ -100,6 +110,7 @@ Want to see the target before building? Open [`templates/article.html`](./skills
 | Mobile | Explicit tiers, 44px tap targets, zero horizontal overflow | [`responsive.md`](./skills/blog-builder/references/responsive.md) |
 | SEO/GEO | Answer-first + TL;DR, `@graph` JSON-LD, `dateModified` | [`seo-geo.md`](./skills/blog-builder/references/seo-geo.md) |
 | Content | Bare-tag HTML contract, graceful degradation | [`content-contract.md`](./skills/blog-builder/references/content-contract.md) |
+| Connect | Citely read-API / CPP receiver, deploy-hook freshness | [`citely-connect`](./skills/citely-connect/SKILL.md) · [live spec](https://citely-seo.com/connect/v1/agent.md) |
 
 ## 🗺️ Roadmap
 
